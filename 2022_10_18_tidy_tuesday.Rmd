@@ -1,0 +1,166 @@
+---
+title: "TidyTemplate"
+date: 2022-10-19
+output: html_document
+---
+
+# TidyTuesday
+
+Join the R4DS Online Learning Community in the weekly #TidyTuesday event!
+Every week we post a raw dataset, a chart or article related to that dataset, and ask you to explore the data.
+While the dataset will be “tamed”, it will not always be tidy! As such you might need to apply various R for Data Science techniques to wrangle the data into a true tidy format.
+The goal of TidyTuesday is to apply your R skills, get feedback, explore other’s work, and connect with the greater #RStats community!
+As such we encourage everyone of all skills to participate!
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(tidytuesdayR)
+library(scales)
+library(tidytext)
+
+theme_set(theme_light())
+
+tt_caption <- "Source: 8flix.com   |  DataViz: Mike Grow  |  Twitter: @michaelgrow05  |  #TidyTuesday"
+
+```
+
+# Load the weekly Data
+
+Download the weekly data and make available in the `tt` object.
+
+```{r Load}
+
+tt <- tt_load("2022-10-18")
+
+```
+
+
+# Readme
+
+Take a look at the readme for the weekly data to get insight on the dataset.
+This includes a data dictionary, source, and a link to an article on the data.
+
+```{r Readme, eval = interactive()}
+
+tt
+
+```
+
+
+# Glimpse Data
+
+Take an initial look at the format of the data available.
+
+```{r Glimpse}
+
+tt %>% 
+  map(glimpse)
+
+```
+
+# Wrangle
+
+Explore the data and process it into a nice format for plotting! Access each dataset by name by using a dollarsign after the `tt` object and then the name of the data set.
+
+```{r Wrangle}
+
+
+```
+
+
+# Visualize
+
+Using your processed dataset, create your unique visualization.
+
+```{r Visualize}
+
+# histogram of screen time for each entry
+tt$stranger_things_all_dialogue %>%
+  mutate(duration = end_time - start_time) %>%
+  ggplot(aes(x=duration)) +
+  geom_histogram(binwidth = 1)
+```
+
+```{r}
+dialogue_words <- tt$stranger_things_all_dialogue %>% 
+  filter(!is.na(dialogue)) %>%  
+  unnest_tokens(word, dialogue) %>%
+  count(word = word, name = "freq", sort = T) %>%
+  anti_join(stop_words)
+
+dialogue_words_by_season <- tt$stranger_things_all_dialogue %>% 
+  filter(!is.na(dialogue)) %>%  
+  group_by(season) %>%
+  unnest_tokens(word, dialogue) %>%
+  count(word = word, name = "freq") %>%
+  anti_join(stop_words) %>%
+  filter(freq >= 30) %>%
+  arrange(season, desc(freq))
+
+dialogue_words_by_episode <- tt$stranger_things_all_dialogue %>% 
+  filter(!is.na(dialogue)) %>%  
+  group_by(season, episode) %>%
+  unnest_tokens(word, dialogue) %>%
+  count(word = word, name = "freq") %>%
+  anti_join(stop_words) %>%
+  filter(freq >= 10) %>%
+  arrange(season, episode, desc(freq))
+```
+
+```{r}
+library(wordcloud2)
+
+stage_direction_words <- tt$stranger_things_all_dialogue %>% 
+  filter(!is.na(stage_direction)) %>%  
+  unnest_tokens(word, stage_direction) %>%
+  count(word = word, name = "freq", sort = T) %>%
+  anti_join(stop_words)
+
+set.seed(2022)
+wordcloud2(stage_direction_words %>% filter(freq >= 10))
+```
+
+```{r}
+library(sentimentr)
+
+dialogue <- tt$stranger_things_all_dialogue %>% 
+  filter(!is.na(dialogue))
+
+out <- sentiment_by(get_sentences(dialogue$dialogue),
+                    list(dialogue$season, dialogue$episode, dialogue$line)) %>%
+  filter(season == 1)
+
+
+
+ggplot(out, aes(x=line, y=ave_sentiment)) + 
+  facet_wrap(~episode) +
+  geom_point() +
+  geom_smooth(method='lm', formula=y~x, se=F, fullrange = T)
+
+ggplot(out, aes(x=line, y=ave_sentiment)) + 
+  facet_wrap(~episode, ncol=4) +
+  geom_col()
+```
+
+
+```{r}
+# topic modeling
+
+```
+
+
+# Save Image
+
+Save your image for sharing. Be sure to use the `#TidyTuesday` hashtag in your post on twitter! 
+
+```{r}
+
+# This will save your most recent plot
+ggsave(
+  filename = "My TidyTuesday Plot.png",
+  device = "png")
+
+```
