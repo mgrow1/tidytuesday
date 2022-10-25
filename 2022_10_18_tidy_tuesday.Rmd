@@ -20,6 +20,8 @@ library(tidyverse)
 library(tidytuesdayR)
 library(scales)
 library(tidytext)
+library(sentimentr)
+
 
 theme_set(theme_light())
 
@@ -67,7 +69,31 @@ Explore the data and process it into a nice format for plotting! Access each dat
 
 ```{r Wrangle}
 
+dialogue <- tt$stranger_things_all_dialogue %>% 
+  filter(!is.na(dialogue))
 
+dialogue_words <- dialogue %>%  
+  unnest_tokens(word, dialogue) %>%
+  count(word = word, name = "freq", sort = T) %>%
+  anti_join(stop_words)
+
+dialogue_words_by_season <- dialogue %>%  
+  group_by(season) %>%
+  unnest_tokens(word, dialogue) %>%
+  count(word = word, name = "freq") %>%
+  anti_join(stop_words) %>%
+  arrange(season, desc(freq))
+
+dialogue_words_by_episode <- dialogue %>%  
+  group_by(season, episode) %>%
+  unnest_tokens(word, dialogue) %>%
+  count(word = word, name = "freq") %>%
+  anti_join(stop_words) %>%
+  filter(freq >= 10) %>%
+  arrange(season, episode, desc(freq))
+
+dialogue_sentiments <- sentiment_by(get_sentences(dialogue$dialogue),
+                                    list(dialogue$season, dialogue$episode, dialogue$line))
 ```
 
 
@@ -79,36 +105,20 @@ Using your processed dataset, create your unique visualization.
 
 # histogram of screen time for each entry
 tt$stranger_things_all_dialogue %>%
-  mutate(duration = end_time - start_time) %>%
+  mutate(duration = as.double(end_time - start_time)) %>%
   ggplot(aes(x=duration)) +
   geom_histogram(binwidth = 1)
 ```
 
 ```{r}
-dialogue_words <- tt$stranger_things_all_dialogue %>% 
-  filter(!is.na(dialogue)) %>%  
-  unnest_tokens(word, dialogue) %>%
-  count(word = word, name = "freq", sort = T) %>%
-  anti_join(stop_words)
 
-dialogue_words_by_season <- tt$stranger_things_all_dialogue %>% 
-  filter(!is.na(dialogue)) %>%  
-  group_by(season) %>%
-  unnest_tokens(word, dialogue) %>%
-  count(word = word, name = "freq") %>%
-  anti_join(stop_words) %>%
-  filter(freq >= 30) %>%
-  arrange(season, desc(freq))
+duration <-  tt$stranger_things_all_dialogue$end_time - 
+  tt$stranger_things_all_dialogue$start_time
 
-dialogue_words_by_episode <- tt$stranger_things_all_dialogue %>% 
-  filter(!is.na(dialogue)) %>%  
-  group_by(season, episode) %>%
-  unnest_tokens(word, dialogue) %>%
-  count(word = word, name = "freq") %>%
-  anti_join(stop_words) %>%
-  filter(freq >= 10) %>%
-  arrange(season, episode, desc(freq))
+summary(as.double(duration))
 ```
+
+
 
 ```{r}
 library(wordcloud2)
@@ -123,33 +133,35 @@ set.seed(2022)
 wordcloud2(stage_direction_words %>% filter(freq >= 10))
 ```
 
-```{r}
-library(sentimentr)
-
-dialogue <- tt$stranger_things_all_dialogue %>% 
-  filter(!is.na(dialogue))
-
-out <- sentiment_by(get_sentences(dialogue$dialogue),
-                    list(dialogue$season, dialogue$episode, dialogue$line)) %>%
-  filter(season == 1)
-
-
-
-ggplot(out, aes(x=line, y=ave_sentiment)) + 
-  facet_wrap(~episode) +
-  geom_point() +
-  geom_smooth(method='lm', formula=y~x, se=F, fullrange = T)
-
-ggplot(out, aes(x=line, y=ave_sentiment)) + 
-  facet_wrap(~episode, ncol=4) +
-  geom_col()
-```
 
 
 ```{r}
-# topic modeling
+top_words <- dialogue_words %>% slice_max(order_by = freq, n=10)
 
+dialogue_words_by_season %>% 
+  filter(word %in% top_words$word) %>%
+  arrange(desc(freq)) %>%
+  ggplot(aes(y=word, x=freq)) +
+  geom_col() +
+  facet_wrap(~season)
 ```
+
+
+
+```{r}
+dialogue_sentiments %>%
+  group_by(season, episode) %>%
+  summarise(ave_sentiment = mean(ave_sentiment)) %>%
+  ggplot(aes(x=as.factor(episode), y=ave_sentiment, fill=ave_sentiment)) + 
+  facet_wrap(~season) +
+  geom_col(show.legend = F) +
+  labs(title = "Dialogue Sentiment for Stranger Things Epsiodes",
+       x = "episode",
+       y= "average sentiment",
+       caption = tt_caption) +
+    scale_fill_gradient()
+```
+
 
 
 # Save Image
