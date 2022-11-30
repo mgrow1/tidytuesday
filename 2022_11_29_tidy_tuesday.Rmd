@@ -1,0 +1,124 @@
+---
+title: "TidyTemplate"
+date: 2022-11-28
+output: html_document
+---
+
+# TidyTuesday
+
+Join the R4DS Online Learning Community in the weekly #TidyTuesday event!
+Every week we post a raw dataset, a chart or article related to that dataset, and ask you to explore the data.
+While the dataset will be “tamed”, it will not always be tidy! As such you might need to apply various R for Data Science techniques to wrangle the data into a true tidy format.
+The goal of TidyTuesday is to apply your R skills, get feedback, explore other’s work, and connect with the greater #RStats community!
+As such we encourage everyone of all skills to participate!
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(tidytuesdayR)
+
+theme_set(theme_light())
+
+tt_caption <- "Source: FIFA World Cup   |  DataViz: Mike Grow  |  Twitter: @michaelgrow05  |  #TidyTuesday"
+
+```
+
+# Load the weekly Data
+
+Download the weekly data and make available in the `tt` object.
+
+```{r Load}
+
+tt <- tt_load("2022-11-29")
+
+```
+
+
+# Readme
+
+Take a look at the readme for the weekly data to get insight on the dataset.
+This includes a data dictionary, source, and a link to an article on the data.
+
+```{r Readme, eval = interactive()}
+
+tt
+
+```
+
+
+# Glimpse Data
+
+Take an initial look at the format of the data available.
+
+```{r Glimpse}
+
+tt %>% 
+  map(glimpse)
+
+```
+
+# Wrangle
+
+Explore the data and process it into a nice format for plotting! Access each dataset by name by using a dollarsign after the `tt` object and then the name of the data set.
+
+```{r Wrangle}
+
+# for worldcups:
+# horizontal bar chart of winning countries
+# stacked bar chart of top 4 finishes
+# some sort of weighted performance metric where more recent success has more weight?
+# bar chart of goals scored per game (with # of teams on the somewhere?)
+# some sort of metric about attendance per game
+
+## for wcmatches:
+## Does day of the week of a game impact match results in some way? (is this at all interesting?)
+
+```
+
+```{r}
+# horizontal bar chart of winning countries
+ggplot(tt$worldcups, aes(x=winner %>% fct_infreq() %>% fct_rev())) + 
+  geom_bar() + 
+  coord_flip() +
+  xlab("Country") +
+  ylab("Wins")
+```
+
+
+```{r}
+# stacked bar chart of top 4 finishes
+tt$worldcups %>% 
+  select(winner, second, third, fourth) %>%
+  pivot_longer(cols = (winner:fourth), names_to = "Place", values_to = "Country") %>%
+  ggplot(aes(x=Country %>% fct_infreq() %>% fct_rev(), fill=Place)) + 
+  geom_bar() + 
+  coord_flip() +
+  xlab("Country") +
+  scale_fill_brewer("Blues")
+```
+
+
+# Visualize
+
+Using your processed dataset, create your unique visualization.
+
+```{r Visualize}
+
+
+  
+```
+
+# Save Image
+
+Save your image for sharing. Be sure to use the `#TidyTuesday` hashtag in your post on twitter! 
+
+```{r}
+
+# This will save your most recent plot
+ggsave(
+  filename = "My TidyTuesday Plot.png",
+  device = "png")
+
+```
