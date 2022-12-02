@@ -82,9 +82,69 @@ Explore the data and process it into a nice format for plotting! Access each dat
 ggplot(tt$worldcups, aes(x=winner %>% fct_infreq() %>% fct_rev())) + 
   geom_bar() + 
   coord_flip() +
+  scale_y_continuous(minor_breaks = seq(1, 6, 1)) +
   xlab("Country") +
-  ylab("Wins")
+  ylab("Wins") +
+  labs(title = "World Cup Victories, 1930-2018")
 ```
+
+
+```{r}
+temp <- tt$worldcups %>% 
+  select(winner, second, third, fourth) %>%
+  pivot_longer(cols = (winner:fourth), names_to = "Place", values_to = "Country") %>%
+  group_by(Country) %>%
+  count(Place) %>%
+  pivot_wider(id_cols = Country, names_from = Place, values_from = n) %>%
+  mutate_at(vars(-Country), ~replace(., is.na(.), 0)) %>%
+  mutate(top_4 = sum(winner, second, third, fourth)) %>%
+  arrange(desc(top_4), desc(winner), desc(second), desc(third), desc(fourth))
+
+temp
+```
+
+```{r}
+country_levels <- temp$Country %>% as_factor()
+country_levels
+```
+
+
+
+```{r}
+tt$worldcups %>% 
+  select(winner, second, third, fourth) %>%
+  pivot_longer(cols = (winner:fourth), names_to = "Place", values_to = "Country") %>%
+  group_by(Country) %>%
+  count(Place) %>%
+  mutate(Place = factor(Place, levels = c("winner", "second", "third", "fourth"))) %>%
+  arrange(Place, desc(n))
+```
+
+
+```{r}
+tt$worldcups %>% 
+  select(winner, second, third, fourth) %>%
+  pivot_longer(cols = (winner:fourth), names_to = "Place", values_to = "Country") %>%
+  group_by(Country) %>%
+  count(Place) %>%
+  mutate(Place = factor(Place, levels = c("winner", "second", "third", "fourth"))) %>%
+  ggplot(aes(x=n, y=factor(Country, levels=country_levels) %>% fct_rev(), fill=Place)) +
+  geom_col(position = position_stack(reverse = TRUE)) +
+  scale_x_continuous(n.breaks=12, minor_breaks = seq(1, 13, 1)) +
+  xlab("count") +
+  ylab("Country") +
+  labs(title="World Cup Top 4 Finishes, 1930-2018") +
+  scale_fill_brewer(palette="Blues", direction = -1)
+```
+
+```{r}
+tt$worldcups %>% 
+  select(winner, second, third, fourth) %>%
+  pivot_longer(cols = (winner:fourth), names_to = "Place", values_to = "Country") %>%
+  mutate(Place = factor(Place, levels = c("winner", "second", "third", "fourth"))) %>%
+  arrange(Place)
+```
+
 
 
 ```{r}
@@ -92,11 +152,15 @@ ggplot(tt$worldcups, aes(x=winner %>% fct_infreq() %>% fct_rev())) +
 tt$worldcups %>% 
   select(winner, second, third, fourth) %>%
   pivot_longer(cols = (winner:fourth), names_to = "Place", values_to = "Country") %>%
+  mutate(Place = factor(Place, levels = c("winner", "second", "third", "fourth"))) %>%
+  arrange(Place) %>%
   ggplot(aes(x=Country %>% fct_infreq() %>% fct_rev(), fill=Place)) + 
-  geom_bar() + 
+  geom_bar(position = position_stack(reverse = TRUE)) + 
   coord_flip() +
+  scale_y_continuous(n.breaks=12, minor_breaks = seq(1, 13, 1)) +
   xlab("Country") +
-  scale_fill_brewer("Blues")
+  labs(title="World Cup Top 4 Finishes, 1930-2018", fill="Place") +
+  scale_fill_brewer(palette="Blues", direction = -1)
 ```
 
 
