@@ -18,6 +18,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 library(tidyverse)
 library(tidytuesdayR)
+library(ggforce)
 
 theme_set(theme_light())
 
@@ -137,6 +138,80 @@ tt$worldcups %>%
   scale_fill_brewer(palette="Blues", direction = -1)
 ```
 
+```{r, fig.width=6,fig.height=6}
+tt$worldcups %>% 
+  select(winner, second, third, fourth) %>%
+  pivot_longer(cols = (winner:fourth), names_to = "Place", values_to = "Country") %>%
+  mutate(Place = factor(Place, levels = c("winner", "second", "third", "fourth"))) %>%
+  ggplot(aes(x=Place, y=Country %>% fct_rev())) +
+  geom_count() +
+  scale_size_continuous(range=c(5, 10)) +
+  labs(title="World Cup Top 4 Finishes, 1930-2018") +
+  ylab("Country")
+  
+  #ideas for improvement: increase space between rows, add color to dots, facet plot by region (South America, Europe, everywhere else), somehow turn the little dots into soccer balls
+```
+
+
+```{r}
+soccer_balls <- tt$worldcups %>% 
+  select(winner, second, third, fourth) %>%
+  pivot_longer(cols = (winner:fourth), names_to = "Place", values_to = "Country") %>%
+  group_by(Country) %>%
+  count(Place) %>%
+  mutate(Place = factor(Place, levels = c("winner", "second", "third", "fourth"))) %>%
+  group_by(Country) %>% 
+  mutate(Country_y = cur_group_id()) %>%
+  mutate(Place_x = case_when(Place == "winner" ~ 1,
+                        Place == "second" ~ 2,
+                        Place == "third" ~ 3,
+                        Place == "fourth" ~ 4)
+         ) %>%
+  arrange(Country, Place, desc(n))
+
+soccer_balls
+```
+
+```{r}
+country_list <- soccer_balls$Country %>% unique()
+```
+
+
+```{r, fig.width=6,fig.height=6}
+x_scale_factor = 3
+y_scale_factor = 1
+r_scale_factor = 0.2
+
+ggplot() +
+  geom_circle(aes(x0 = Place_x*x_scale_factor, 
+                  y0 = Country_y*y_scale_factor, 
+                  r = n*r_scale_factor, 
+                  color = Place), 
+              data = soccer_balls) +
+  geom_regon(aes(x0 = Place_x*x_scale_factor,
+                 y0 = Country_y,
+                 sides = 5,
+                 r = n*r_scale_factor/2,
+                 angle = 30,
+                 fill = Place),
+             data = soccer_balls) +
+  coord_fixed() +
+  labs(title="World Cup Top 4 Finishes, 1930-2018") +
+  xlab("Place") +
+  ylab("Country") +
+  scale_y_continuous(breaks = seq(1:length(country_list))*y_scale_factor, 
+                     labels = country_list,
+                     minor_breaks = seq(1:length(country_list))*y_scale_factor) +
+  scale_x_continuous(breaks = c(1:4)*x_scale_factor, 
+                     labels = c("winner","second","third","fourth"),
+                     minor_breaks = c(1:4)*x_scale_factor) +
+  guides(fill = "none", color = "none") +
+  scale_color_manual(values = c("gold", "ivory4", "goldenrod", "blue")) +
+  scale_fill_manual(values = c("gold", "ivory4", "goldenrod", "blue"))
+```
+
+
+
 ```{r}
 tt$worldcups %>% 
   select(winner, second, third, fourth) %>%
@@ -162,6 +237,15 @@ tt$worldcups %>%
   labs(title="World Cup Top 4 Finishes, 1930-2018", fill="Place") +
   scale_fill_brewer(palette="Blues", direction = -1)
 ```
+
+```{r}
+# bar chart of average number of goals scored per game (with # of teams on the somewhere?)
+tt$worldcups %>%
+  mutate(goals_per_game = goals_scored/games) %>%
+  ggplot(aes(x=year, y=goals_per_game, fill=teams)) +
+  geom_col()
+```
+
 
 
 # Visualize
