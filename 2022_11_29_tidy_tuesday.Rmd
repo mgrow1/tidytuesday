@@ -66,6 +66,8 @@ Explore the data and process it into a nice format for plotting! Access each dat
 
 ```{r Wrangle}
 
+# IDEAS:
+
 # for worldcups:
 # horizontal bar chart of winning countries
 # stacked bar chart of top 4 finishes
@@ -91,7 +93,7 @@ ggplot(tt$worldcups, aes(x=winner %>% fct_infreq() %>% fct_rev())) +
 
 
 ```{r}
-temp <- tt$worldcups %>% 
+wc_results <- tt$worldcups %>% 
   select(winner, second, third, fourth) %>%
   pivot_longer(cols = (winner:fourth), names_to = "Place", values_to = "Country") %>%
   group_by(Country) %>%
@@ -101,11 +103,11 @@ temp <- tt$worldcups %>%
   mutate(top_4 = sum(winner, second, third, fourth)) %>%
   arrange(desc(top_4), desc(winner), desc(second), desc(third), desc(fourth))
 
-temp
+wc_results
 ```
 
 ```{r}
-country_levels <- temp$Country %>% as_factor()
+country_levels <- wc_results$Country %>% as_factor()
 country_levels
 ```
 
@@ -153,7 +155,20 @@ tt$worldcups %>%
 ```
 
 
+
 ```{r}
+soccer_balls$Country %>% unique()
+```
+
+
+```{r}
+Europe <- c("Austria", "Belgium", "Bulgaria", "Croatia", "Czechoslovakia", 
+            "England", "France", "Germany", "Hungary", "Italy", "Netherlands",
+            "Poland", "Portugal", "Spain", "Sweden", "Turkey", "West Germany", 
+            "Yugoslavia")
+South_America <- c("Argentina", "Brazil", "Chile", "Uruguay")
+the_rest <- c("South Korea", "Soviet Union", "USA")
+
 soccer_balls <- tt$worldcups %>% 
   select(winner, second, third, fourth) %>%
   pivot_longer(cols = (winner:fourth), names_to = "Place", values_to = "Country") %>%
@@ -167,13 +182,12 @@ soccer_balls <- tt$worldcups %>%
                         Place == "third" ~ 3,
                         Place == "fourth" ~ 4)
          ) %>%
+  mutate(Region = case_when(Country %in% Europe ~ "Europe",
+                            Country %in% South_America ~ "South America",
+                            Country %in% the_rest ~ "Everywhere Else")) %>%
   arrange(Country, Place, desc(n))
 
 soccer_balls
-```
-
-```{r}
-country_list <- soccer_balls$Country %>% unique()
 ```
 
 
@@ -196,6 +210,7 @@ ggplot() +
                  fill = Place),
              data = soccer_balls) +
   coord_fixed() +
+  #facet_wrap(~Region) +
   labs(title="World Cup Top 4 Finishes, 1930-2018") +
   xlab("Place") +
   ylab("Country") +
